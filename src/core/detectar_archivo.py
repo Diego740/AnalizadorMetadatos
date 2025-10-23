@@ -2,7 +2,7 @@ import magic
 import sys
 import os
 from pathlib import Path
-
+from utils import archivo_existe
 
 # Diccionario global de extensiones a MIME types
 EXTENSIONES_MIME = {
@@ -11,6 +11,7 @@ EXTENSIONES_MIME = {
     '.jpeg': 'image/jpeg',
     '.png': 'image/png',
     '.gif': 'image/gif',
+    '.webp': 'image/webp',
     '.txt': 'text/plain',
     '.doc': 'application/msword',
     '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -29,12 +30,9 @@ EXTENSIONES_MIME = {
     '.csv': 'text/csv',
     '.py': 'text/x-python',
     '.js': 'application/javascript',
-    '.css': 'text/css'
+    '.css': 'text/css',
+    '.rtf': 'text/rtf'
 }
-
-def archivo_existe(ruta_archivo):
-    """Verifica si el archivo existe."""
-    return os.path.isfile(ruta_archivo)
 
 def detectar_tipo_archivo(ruta_archivo):
     """
