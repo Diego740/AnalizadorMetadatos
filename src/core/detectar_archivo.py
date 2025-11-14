@@ -49,9 +49,6 @@ def detectar_tipo_archivo(ruta_archivo):
         FileNotFoundError: Si el archivo no existe
         Exception: Para otros errores durante el análisis
     """
-    if not archivo_existe(ruta_archivo):
-        print(f"El archivo '{ruta_archivo}' no existe.")
-        return
     
     try:
         # Crea un objeto Magic para obtener la descripción del archivo
@@ -62,7 +59,7 @@ def detectar_tipo_archivo(ruta_archivo):
         ms_mime = magic.Magic(mime=True)
         mime_type = ms_mime.from_file(ruta_archivo)
         
-        res = [f"Archivo: {ruta_archivo}", f"Descripción: {descripcion}", f"Tipo MIME: {mime_type}"]
+        res = [f"Archivo: {ruta_archivo}", f"Descripción: {descripcion.split(',')[0]}", f"Tipo MIME: {mime_type}"]
         '''
         print(f"Archivo: {ruta_archivo}")
         print(f"Descripción: {descripcion}")
@@ -91,15 +88,14 @@ def coincidencia_extensiones(ruta_archivo):
         Exception: Para otros errores durante el análisis
     """
     try:
-         # Obtener información del archivo
+
         path = Path(ruta_archivo)
-        extension = path.suffix.lower()  # Extensión en minúsculas
+        extension = path.suffix.lower()
         
         ms_mime = magic.Magic(mime=True)
         mime_type = ms_mime.from_file(ruta_archivo)
         
         
-        # Verificar coincidencia
         mime_esperado = EXTENSIONES_MIME.get(extension, "desconocido")
         
         return mime_esperado == mime_type

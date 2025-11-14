@@ -5,16 +5,11 @@ from pathlib import Path
 from utils import archivo_existe
 import magic
 
-# Librerías externas específicas para metadatos
 from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
 from PyPDF2 import PdfReader
 from docx import Document
 import zipfile
-
-# ============================================================
-# FUNCIONES PRINCIPALES
-# ============================================================
 
 def extraer_metadatos(ruta_archivo):
     """
@@ -41,31 +36,26 @@ def extraer_metadatos(ruta_archivo):
     }
 
     try:
-        # Archivos de imagen
         if mime.startswith("image/"):
             metadatos["metadatos_extraidos"] = extraer_metadatos_imagen(ruta_archivo)
 
-        # Archivos PDF
         elif mime == "application/pdf":
             metadatos["metadatos_extraidos"] = extraer_metadatos_pdf(ruta_archivo)
 
-        # Documentos Word
         elif mime in [
             "application/msword",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         ]:
             metadatos["metadatos_extraidos"] = extraer_metadatos_docx(ruta_archivo)
 
-        # Archivos ZIP o RAR
         elif mime in ["application/zip", "application/x-rar-compressed"]:
             metadatos["metadatos_extraidos"] = extraer_metadatos_zip(ruta_archivo)
 
-        # Archivos de texto plano
         elif mime.startswith("text/"):
             metadatos["metadatos_extraidos"] = {
                 "tamaño_bytes": os.path.getsize(ruta_archivo)
             }
-
+        
         else:
             metadatos["metadatos_extraidos"] = {
                 "info": "Formato no soportado o sin metadatos legibles"
@@ -77,9 +67,7 @@ def extraer_metadatos(ruta_archivo):
     return metadatos
 
 
-# ============================================================
-# EXTRACCIÓN SEGÚN FORMATO
-# ============================================================
+#Extracción de metadatos 
 
 def extraer_metadatos_imagen(ruta_archivo):
     """Extrae metadatos EXIF y convierte coordenadas GPS si están disponibles."""
@@ -96,7 +84,7 @@ def extraer_metadatos_imagen(ruta_archivo):
 
                 # Si es información GPS, comprobamos su tipo
                 if tag == "GPSInfo":
-                    if isinstance(valor, dict):  # ✅ solo si es un diccionario real
+                    if isinstance(valor, dict):
                         gps_info = {}
                         for t in valor:
                             sub_tag = GPSTAGS.get(t, t)
@@ -186,24 +174,17 @@ def extraer_metadatos_zip(ruta_archivo):
     try:
         with zipfile.ZipFile(ruta_archivo, "r") as zipf:
             datos["num_archivos"] = len(zipf.namelist())
-            datos["nombres"] = zipf.namelist()[:10]  # mostramos los primeros 10
+            datos["nombres"] = zipf.namelist()[:10] 
     except Exception as e:
         datos["error"] = f"No se pudieron leer metadatos ZIP: {e}"
     return datos
 
 
-# ============================================================
-# VISUALIZACIÓN
-# ============================================================
 
 def mostrar_metadatos(metadatos):
     """Muestra los metadatos en formato legible por consola."""
     print(json.dumps(metadatos, indent=4, ensure_ascii=False))
 
-
-# ============================================================
-# MAIN PARA PRUEBAS MANUALES
-# ============================================================
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
