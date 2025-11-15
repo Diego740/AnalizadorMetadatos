@@ -1,0 +1,6 @@
+python-magic
+pillow
+pillow-heif
+piexif
+PyPDF2
+python-docx
