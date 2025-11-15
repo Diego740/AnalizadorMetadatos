@@ -25,7 +25,6 @@ from core.modify_metadata.wipe_metadata import (
     wipe_metadata_image,
     wipe_metadata_pdf,
 )
-from utils.path_autocomplete import enable_autocomplete
 
 MENU = """\nSeleccione una opción:\n1. Analizar metadatos\n2. Verificar extensión/MIME\n3. Borrar metadatos\n4. Asignar metadatos por defecto\n5. Modificar metadatos personalizados\n6. Salir\n> """
 
@@ -127,7 +126,6 @@ def _handle_custom_metadata() -> None:
 
 
 def main() -> None:
-    enable_autocomplete()
     actions = {
         "1": _handle_analyze,
         "2": _handle_verify_extension,
