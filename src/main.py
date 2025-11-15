@@ -136,7 +136,7 @@ def main() -> None:
     while True:
         choice = input(MENU).strip()
         if choice == "6":
-            print("Hasta luego.")
+            print("Saliendo...")
             break
         action = actions.get(choice)
         if action:
