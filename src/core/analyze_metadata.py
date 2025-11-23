@@ -138,6 +138,17 @@ def extract_metadata_auto(path: str | Path) -> Dict[str, Any]:
     """Detect file type and dispatch to the proper extractor."""
 
     archivo = ensure_readable_file(path)
+
+    # Check for empty file
+    if archivo.stat().st_size == 0:
+        return {
+            "archivo": archivo.name,
+            "ruta": str(archivo),
+            "tipo_mime": "application/x-empty",
+            "extension": archivo.suffix.lower(),
+            "metadatos": {"info": "El archivo está vacío (0 bytes)."},
+        }
+
     mime = puremagic.from_file(str(archivo), mime=True)
     extension = archivo.suffix.lower()
 
