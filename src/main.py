@@ -1,6 +1,3 @@
-"""Simple CLI entry-point for the metadata toolkit."""
-from __future__ import annotations
-
 from typing import Dict
 
 from core.analyze_metadata import extract_metadata_auto, format_metadata
