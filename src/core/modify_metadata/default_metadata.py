@@ -13,7 +13,7 @@ from docx import Document
 from .utils_modifier import ensure_editable_file, ensure_output_path
 
 DEFAULT_AUTHOR = "AnalizadorMetadatos"
-DEFAULT_TITLE = "Documento procesado"
+DEFAULT_TITLE = "Processed document"
 
 
 def _now_string() -> str:
@@ -33,7 +33,7 @@ def apply_default_pdf_metadata(path: str | Path, destination: Optional[str | Pat
         "/Author": DEFAULT_AUTHOR,
         "/Title": DEFAULT_TITLE,
         "/Producer": "AnalizadorMetadatos",
-        "/Creator": "Analizador CLI",
+        "/Creator": "CLI Analyzer",
         "/CreationDate": _now_string(),
     })
     with output.open("wb") as handler:
@@ -50,10 +50,10 @@ def apply_default_docx_metadata(path: str | Path, destination: Optional[str | Pa
     props = document.core_properties
     props.author = DEFAULT_AUTHOR
     props.title = DEFAULT_TITLE
-    props.subject = "Documento generado"
-    props.comments = "Metadatos asignados automáticamente"
+    props.subject = "Generated document"
+    props.comments = "Metadata assigned automatically"
     props.last_modified_by = DEFAULT_AUTHOR
-    props.category = "Analizador"
+    props.category = "Analyzer"
     document.save(str(output))
     return output
 
@@ -69,7 +69,7 @@ def apply_default_image_metadata(path: str | Path, destination: Optional[str | P
             exif_dict = {
                 "0th": {
                     piexif.ImageIFD.Make: DEFAULT_AUTHOR,
-                    piexif.ImageIFD.Software: "Analizador CLI",
+                    piexif.ImageIFD.Software: "CLI Analyzer",
                     piexif.ImageIFD.Artist: DEFAULT_AUTHOR,
                 },
                 "Exif": {
@@ -81,7 +81,7 @@ def apply_default_image_metadata(path: str | Path, destination: Optional[str | P
         else:
             info = PngImagePlugin.PngInfo()
             info.add_text("Author", DEFAULT_AUTHOR)
-            info.add_text("Software", "Analizador CLI")
+            info.add_text("Software", "CLI Analyzer")
             info.add_text("Description", DEFAULT_TITLE)
             img.save(str(output), format=img.format, pnginfo=info)
     return output

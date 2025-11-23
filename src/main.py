@@ -26,11 +26,11 @@ from core.modify_metadata.wipe_metadata import (
     wipe_metadata_pdf,
 )
 
-MENU = """\nSeleccione una opción:\n1. Analizar metadatos\n2. Verificar extensión/MIME\n3. Borrar metadatos\n4. Asignar metadatos por defecto\n5. Modificar metadatos personalizados\n6. Salir\n> """
+MENU = """\nSelect an option:\n1. Analyze metadata\n2. Verify extension/MIME\n3. Wipe metadata\n4. Apply default metadata\n5. Modify custom metadata\n6. Exit\n> """
 
 
 def _prompt_path() -> str:
-    return input("Ruta del archivo: ").strip()
+    return input("File path: ").strip()
 
 
 def _handle_analyze() -> None:
@@ -48,10 +48,10 @@ def _handle_verify_extension() -> None:
         mime = get_mime_type(path)
         matches = extension_matches_mime(path)
         suggestion = suggest_correct_extension(path)
-        print(f"Tipo MIME detectado: {mime}")
-        print(f"¿Coincide la extensión?: {'Sí' if matches else 'No'}")
+        print(f"Detected MIME type: {mime}")
+        print(f"Extension matches?: {'Yes' if matches else 'No'}")
         if not matches and suggestion:
-            print(f"Extensión sugerida: {suggestion}")
+            print(f"Suggested extension: {suggestion}")
     except FileNotFoundError as exc:
         print(exc)
 
@@ -67,9 +67,9 @@ def _handle_wipe_metadata() -> None:
         elif info["type"] == "image":
             new_path = wipe_metadata_image(path)
         else:
-            print("Formato no soportado.")
+            print("Unsupported format.")
             return
-        print(f"Metadatos eliminados. Archivo generado: {new_path}")
+        print(f"Metadata wiped. Generated file: {new_path}")
     except FileNotFoundError as exc:
         print(exc)
 
@@ -85,15 +85,15 @@ def _handle_default_metadata() -> None:
         elif info["type"] == "image":
             new_path = apply_default_image_metadata(path)
         else:
-            print("Formato no soportado.")
+            print("Unsupported format.")
             return
-        print(f"Metadatos por defecto aplicados. Archivo generado: {new_path}")
+        print(f"Default metadata applied. Generated file: {new_path}")
     except FileNotFoundError as exc:
         print(exc)
 
 
 def _prompt_metadata_dict() -> Dict[str, str]:
-    print("Ingrese pares clave=valor separados por coma. Ejemplo: autor=Juan, titulo=Reporte")
+    print("Enter key=value pairs separated by comma. Example: author=John, title=Report")
     raw = input("> ").strip()
     result: Dict[str, str] = {}
     for pair in raw.split(','):
@@ -107,7 +107,7 @@ def _handle_custom_metadata() -> None:
     path = _prompt_path()
     metadata = _prompt_metadata_dict()
     if not metadata:
-        print("No se ingresaron metadatos válidos.")
+        print("No valid metadata entered.")
         return
     try:
         info = load_file(path)
@@ -118,9 +118,9 @@ def _handle_custom_metadata() -> None:
         elif info["type"] == "image":
             new_path = apply_custom_image_metadata(path, metadata)
         else:
-            print("Formato no soportado.")
+            print("Unsupported format.")
             return
-        print(f"Metadatos personalizados aplicados. Archivo generado: {new_path}")
+        print(f"Custom metadata applied. Generated file: {new_path}")
     except FileNotFoundError as exc:
         print(exc)
 
@@ -136,13 +136,13 @@ def main() -> None:
     while True:
         choice = input(MENU).strip()
         if choice == "6":
-            print("Saliendo...")
+            print("Exiting...")
             break
         action = actions.get(choice)
         if action:
             action()
         else:
-            print("Opción no válida.")
+            print("Invalid option.")
 
 
 if __name__ == "__main__":

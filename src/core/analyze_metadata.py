@@ -49,7 +49,7 @@ def extract_metadata_pdf(path: str | Path) -> Dict[str, Any]:
             for key, value in info.items():
                 data[key.strip("/")] = str(value)
     except Exception as exc:
-        data["error"] = f"No se pudieron leer metadatos PDF: {exc}"
+        data["error"] = f"Could not read PDF metadata: {exc}"
     return data
 
 
@@ -62,16 +62,21 @@ def extract_metadata_docx(path: str | Path) -> Dict[str, Any]:
         doc = Document(str(archivo))
         props = doc.core_properties
         data = {
-            "autor": props.author,
-            "titulo": props.title,
-            "asunto": props.subject,
-            "creado": str(props.created),
-            "modificado": str(props.modified),
-            "ultima_impresion": str(props.last_printed),
+            "author": props.author,
+            "title": props.title,
+            "subject": props.subject,
+            "created": str(props.created),
+            "modified": str(props.modified),
+            "last_printed": str(props.last_printed),
         }
     except Exception as exc:
-        data["error"] = f"No se pudieron leer metadatos DOCX: {exc}"
+        data["error"] = f"Could not read DOCX metadata: {exc}"
     return data
+
+
+def get_google_maps_link(lat: float, lon: float) -> str:
+    """Generate a Google Maps link for the given coordinates."""
+    return f"https://www.google.com/maps?q={lat},{lon}"
 
 
 def extract_metadata_image(path: str | Path) -> Dict[str, Any]:
@@ -81,7 +86,7 @@ def extract_metadata_image(path: str | Path) -> Dict[str, Any]:
     data: Dict[str, Any] = {}
     try:
         img = Image.open(str(archivo))
-        data["Formato"] = img.format
+        data["Format"] = img.format
         exif_bytes = img.info.get("exif")
         if exif_bytes:
             exif_dict = piexif.load(exif_bytes)
@@ -98,15 +103,17 @@ def extract_metadata_image(path: str | Path) -> Dict[str, Any]:
             coords = convert_gps_to_decimal(exif_dict.get("GPS", {}))
             if coords:
                 data.update(coords)
+                if "GPS_Latitude" in coords and "GPS_Longitude" in coords:
+                    data["MapsLink"] = get_google_maps_link(coords["GPS_Latitude"], coords["GPS_Longitude"])
             return data
         exif = img.getexif()
         if exif:
             for tag_id, value in exif.items():
                 data[TAGS.get(tag_id, str(tag_id))] = _to_json_safe(value)
         else:
-            data["info"] = "No se encontraron metadatos EXIF."
+            data["info"] = "No EXIF metadata found."
     except Exception as exc:
-        data["error"] = f"Error al leer metadatos: {exc}"
+        data["error"] = f"Error reading metadata: {exc}"
     return data
 
 
@@ -129,7 +136,7 @@ def convert_gps_to_decimal(gps_info: Dict[str, Any]) -> Dict[str, float]:
             lat = -lat
         if gps_info.get(3) in {b"W", "W"}:
             lon = -lon
-        return {"GPS_Latitud": lat, "GPS_Longitud": lon}
+        return {"GPS_Latitude": lat, "GPS_Longitude": lon}
     except Exception:
         return {}
 
@@ -142,39 +149,39 @@ def extract_metadata_auto(path: str | Path) -> Dict[str, Any]:
     # Check for empty file
     if archivo.stat().st_size == 0:
         return {
-            "archivo": archivo.name,
-            "ruta": str(archivo),
-            "tipo_mime": "application/x-empty",
+            "file": archivo.name,
+            "path": str(archivo),
+            "mime_type": "application/x-empty",
             "extension": archivo.suffix.lower(),
-            "metadatos": {"info": "El archivo está vacío (0 bytes)."},
+            "metadata": {"info": "The file is empty (0 bytes)."},
         }
 
     mime = puremagic.from_file(str(archivo), mime=True)
     extension = archivo.suffix.lower()
 
     resultado = {
-        "archivo": archivo.name,
-        "ruta": str(archivo),
-        "tipo_mime": mime,
+        "file": archivo.name,
+        "path": str(archivo),
+        "mime_type": mime,
         "extension": extension,
-        "metadatos": {},
+        "metadata": {},
     }
 
     try:
         if mime.startswith("image/"):
-            resultado["metadatos"] = extract_metadata_image(archivo)
+            resultado["metadata"] = extract_metadata_image(archivo)
         elif mime == "application/pdf":
-            resultado["metadatos"] = extract_metadata_pdf(archivo)
+            resultado["metadata"] = extract_metadata_pdf(archivo)
         elif mime in (
             "application/msword",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         ):
-            resultado["metadatos"] = extract_metadata_docx(archivo)
+            resultado["metadata"] = extract_metadata_docx(archivo)
         else:
-            resultado["metadatos"] = {"info": "Formato no soportado"}
+            resultado["metadata"] = {"info": "Unsupported format"}
     except Exception as exc:
-        LOGGER.error("Error analizando %s: %s", archivo, exc)
-        resultado["metadatos"] = {"error": str(exc)}
+        LOGGER.error("Error analyzing %s: %s", archivo, exc)
+        resultado["metadata"] = {"error": str(exc)}
     return resultado
 
 
