@@ -6,7 +6,7 @@ from typing import Any, Dict
 
 import json
 
-import magic
+import puremagic
 from PIL import Image
 from PIL.ExifTags import TAGS
 from PyPDF2 import PdfReader
@@ -138,7 +138,7 @@ def extract_metadata_auto(path: str | Path) -> Dict[str, Any]:
     """Detect file type and dispatch to the proper extractor."""
 
     archivo = ensure_readable_file(path)
-    mime = magic.from_file(str(archivo), mime=True)
+    mime = puremagic.from_file(str(archivo), mime=True)
     extension = archivo.suffix.lower()
 
     resultado = {

@@ -11,7 +11,7 @@ EXTENSIONES_MIME: dict[str, str] = {
     ".gif": "image/gif",
     ".webp": "image/webp",
     ".heic": "image/heic",
-    ".heif": "image/heif",
+    ".heic": "image/heif",
     ".txt": "text/plain",
     ".doc": "application/msword",
     ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

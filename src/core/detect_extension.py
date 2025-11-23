@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-import magic
+import puremagic
 
 from utils.mime_tools import EXTENSIONES_MIME, guess_extension_from_mime
 from utils.path_tools import ensure_readable_file
@@ -22,8 +22,7 @@ def get_mime_type(path: str | Path) -> Optional[str]:
 
     try:
         archivo = ensure_readable_file(path)
-        ms_mime = magic.Magic(mime=True)
-        return ms_mime.from_file(str(archivo))
+        return puremagic.from_file(str(archivo), mime=True)
     except FileNotFoundError:
         raise
     except Exception:

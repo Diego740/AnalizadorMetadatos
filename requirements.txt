@@ -1,4 +1,4 @@
-python-magic#MAC LINUX
+puremagic
 pillow
 pillow-heif
 piexif
