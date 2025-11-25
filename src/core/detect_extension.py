@@ -1,4 +1,6 @@
-"""Helpers to detect and validate file extensions using libmagic."""
+"""
+Ayudantes para detectar y validar extensiones de archivo usando libmagic.
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -10,54 +12,46 @@ from utils.mime_tools import EXTENSIONES_MIME, guess_extension_from_mime
 from utils.path_tools import ensure_readable_file
 
 
-def get_mime_type(path: str | Path) -> Optional[str]:
-    """Return the MIME type reported by libmagic for *path*.
-
-    Args:
-        path: Local path to the file.
-
-    Returns:
-        The MIME type string or ``None`` if it cannot be determined.
+def get_mime_type(file_path: str | Path) -> Optional[str]:
     """
-
+    Devuelve el tipo MIME reportado por libmagic.
+    """
     try:
-        archivo = ensure_readable_file(path)
-        return puremagic.from_file(str(archivo), mime=True)
+        safe_path = ensure_readable_file(file_path)
+        return puremagic.from_file(str(safe_path), mime=True)
     except FileNotFoundError:
         raise
     except Exception:
         return None
 
 
-def extension_matches_mime(path: str | Path) -> bool:
-    """Return ``True`` if the extension matches the detected MIME."""
-
-    archivo = ensure_readable_file(path)
-    extension = archivo.suffix.lower()
-    mime = get_mime_type(archivo)
-    if mime is None:
-        return False
-    return EXTENSIONES_MIME.get(extension) == mime
-
-
-def suggest_correct_extension(path: str | Path) -> Optional[str]:
-    """Return the best extension suggestion for *path*.
-
-    If the current extension already matches the MIME type the same
-    extension is returned. Otherwise, the function tries to guess the
-    correct one using the MIME table.
+def extension_matches_mime(file_path: str | Path) -> bool:
     """
+    Comprueba si la extensión del archivo coincide con su tipo MIME detectado.
+    """
+    safe_path = ensure_readable_file(file_path)
+    current_extension = safe_path.suffix.lower()
+    mime_type = get_mime_type(safe_path)
+    
+    if mime_type is None:
+        return False
+        
+    return EXTENSIONES_MIME.get(current_extension) == mime_type
 
-    archivo = ensure_readable_file(path)
-    mime = get_mime_type(archivo)
-    if mime is None:
+
+def suggest_correct_extension(file_path: str | Path) -> Optional[str]:
+    """
+    Sugiere la extensión correcta basada en el tipo MIME del archivo.
+    Devuelve None si la extensión actual ya es correcta o si es desconocida.
+    """
+    safe_path = ensure_readable_file(file_path)
+    mime_type = get_mime_type(safe_path)
+    
+    if mime_type is None:
         return None
 
-    detected = guess_extension_from_mime(mime)
-    if detected:
-        return detected
-    return archivo.suffix.lower() or None
-
-
-# Example usage:
-# >>> suggest_correct_extension("foto.jpeg")
+    suggested = guess_extension_from_mime(mime_type)
+    if suggested:
+        return suggested
+        
+    return safe_path.suffix.lower() or None

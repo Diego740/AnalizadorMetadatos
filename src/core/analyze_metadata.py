@@ -1,8 +1,13 @@
-"""Metadata extraction routines."""
+"""
+Rutinas de extracción de metadatos.
+
+Este módulo maneja la extracción de metadatos de varios formatos de archivo
+incluyendo PDF, DOCX e Imágenes (JPEG/PNG/HEIC).
+"""
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import json
 
@@ -17,51 +22,68 @@ from pillow_heif import register_heif_opener
 from utils.logger import get_logger
 from utils.path_tools import ensure_readable_file
 
+# Habilita el soporte HEIC para Pillow
 register_heif_opener()
-LOGGER = get_logger(__name__)
+
+logger = get_logger(__name__)
 
 
-def _to_json_safe(value: Any) -> Any:
-    """Convert EXIF values into JSON serializable objects."""
-
+def _sanitize_exif_value(value: Any) -> Any:
+    """
+    Ayuda a convertir datos EXIF en formatos compatibles con JSON.
+    Maneja la decodificación de bytes y estructuras recursivas.
+    """
     if isinstance(value, bytes):
         try:
             return value.decode("utf-8", "ignore")
         except Exception:
+            # Si no podemos decodificarlo, devolvemos la representación en cadena
             return repr(value)
+            
     if isinstance(value, tuple):
-        return tuple(_to_json_safe(v) for v in value)
+        return tuple(_sanitize_exif_value(v) for v in value)
+        
     if isinstance(value, list):
-        return [_to_json_safe(v) for v in value]
+        return [_sanitize_exif_value(v) for v in value]
+        
     if isinstance(value, dict):
-        return {k: _to_json_safe(v) for k, v in value.items()}
+        return {k: _sanitize_exif_value(v) for k, v in value.items()}
+        
     return value
 
 
-def extract_metadata_pdf(path: str | Path) -> Dict[str, Any]:
-    """Extract metadata from a PDF file."""
-
-    data: Dict[str, Any] = {}
-    archivo = ensure_readable_file(path)
+def extract_metadata_pdf(file_path: str | Path) -> Dict[str, Any]:
+    """Lee los metadatos de un archivo PDF."""
+    metadata: Dict[str, Any] = {}
+    safe_path = ensure_readable_file(file_path)
+    
     try:
-        with archivo.open("rb") as handler:
-            info = PdfReader(handler).metadata or {}
+        with safe_path.open("rb") as f:
+            pdf = PdfReader(f)
+            info = pdf.metadata or {}
+            
+            # Limpia las claves (elimina la barra inicial común en diccionarios PDF)
             for key, value in info.items():
-                data[key.strip("/")] = str(value)
-    except Exception as exc:
-        data["error"] = f"Could not read PDF metadata: {exc}"
-    return data
+                clean_key = key.strip("/")
+                metadata[clean_key] = str(value)
+                
+    except Exception as e:
+        metadata["error"] = f"Failed to read PDF metadata: {e}"
+        
+    return metadata
 
 
-def extract_metadata_docx(path: str | Path) -> Dict[str, Any]:
-    """Extract metadata from a DOCX document."""
-
-    data: Dict[str, Any] = {}
-    archivo = ensure_readable_file(path)
+def extract_metadata_docx(file_path: str | Path) -> Dict[str, Any]:
+    """Lee las propiedades principales de un archivo DOCX."""
+    metadata: Dict[str, Any] = {}
+    safe_path = ensure_readable_file(file_path)
+    
     try:
-        doc = Document(str(archivo))
+        doc = Document(str(safe_path))
         props = doc.core_properties
-        data = {
+        
+        # Extrae propiedades estándar
+        metadata = {
             "author": props.author,
             "title": props.title,
             "subject": props.subject,
@@ -69,127 +91,158 @@ def extract_metadata_docx(path: str | Path) -> Dict[str, Any]:
             "modified": str(props.modified),
             "last_printed": str(props.last_printed),
         }
-    except Exception as exc:
-        data["error"] = f"Could not read DOCX metadata: {exc}"
-    return data
+        
+    except Exception as e:
+        metadata["error"] = f"Failed to read DOCX metadata: {e}"
+        
+    return metadata
 
 
-def get_google_maps_link(lat: float, lon: float) -> str:
-    """Generate a Google Maps link for the given coordinates."""
+def generate_maps_link(lat: float, lon: float) -> str:
+    """Crea un enlace de Google Maps a partir de las coordenadas."""
     return f"https://www.google.com/maps?q={lat},{lon}"
 
 
-def extract_metadata_image(path: str | Path) -> Dict[str, Any]:
-    """Extract EXIF metadata for JPEG/PNG/HEIC images."""
-
-    archivo = ensure_readable_file(path)
-    data: Dict[str, Any] = {}
+def extract_metadata_image(file_path: str | Path) -> Dict[str, Any]:
+    """
+    Extrae EXIF y otros metadatos de imágenes.
+    Soporta formatos estándar + HEIC.
+    """
+    safe_path = ensure_readable_file(file_path)
+    metadata: Dict[str, Any] = {}
+    
     try:
-        img = Image.open(str(archivo))
-        data["Format"] = img.format
+        img = Image.open(str(safe_path))
+        metadata["Format"] = img.format
+        
+        # Intenta obtener datos EXIF sin procesar primero
         exif_bytes = img.info.get("exif")
+        
         if exif_bytes:
-            exif_dict = piexif.load(exif_bytes)
-            for ifd_name, content in exif_dict.items():
+            exif_data = piexif.load(exif_bytes)
+            
+            for ifd_name, content in exif_data.items():
                 if isinstance(content, dict):
                     for tag_id, value in content.items():
+                        # Resuelve los nombres de las etiquetas
                         tag_name = piexif.TAGS.get(ifd_name, {}).get(tag_id, {}).get("name", f"{ifd_name}-{tag_id}")
+                        
                         if ifd_name == "GPS":
-                            if "GPS" not in data:
-                                data["GPS"] = {}
-                            data["GPS"][tag_name] = _to_json_safe(value)
+                            if "GPS" not in metadata:
+                                metadata["GPS"] = {}
+                            metadata["GPS"][tag_name] = _sanitize_exif_value(value)
                         else:
-                            data[tag_name] = _to_json_safe(value)
-            coords = convert_gps_to_decimal(exif_dict.get("GPS", {}))
+                            metadata[tag_name] = _sanitize_exif_value(value)
+            
+            # Procesa las coordenadas GPS si están disponibles
+            coords = parse_gps_coordinates(exif_data.get("GPS", {}))
             if coords:
-                data.update(coords)
+                metadata.update(coords)
                 if "GPS_Latitude" in coords and "GPS_Longitude" in coords:
-                    data["MapsLink"] = get_google_maps_link(coords["GPS_Latitude"], coords["GPS_Longitude"])
-            return data
+                    metadata["MapsLink"] = generate_maps_link(coords["GPS_Latitude"], coords["GPS_Longitude"])
+            
+            return metadata
+            
+        # Alternativa para EXIF básico
         exif = img.getexif()
         if exif:
             for tag_id, value in exif.items():
-                data[TAGS.get(tag_id, str(tag_id))] = _to_json_safe(value)
+                tag_name = TAGS.get(tag_id, str(tag_id))
+                metadata[tag_name] = _sanitize_exif_value(value)
         else:
-            data["info"] = "No EXIF metadata found."
-    except Exception as exc:
-        data["error"] = f"Error reading metadata: {exc}"
-    return data
+            metadata["info"] = "No EXIF data found in image."
+            
+    except Exception as e:
+        metadata["error"] = f"Error processing image: {e}"
+        
+    return metadata
 
 
-def convert_gps_to_decimal(gps_info: Dict[str, Any]) -> Dict[str, float]:
-    """Convert GPS rational tuples into decimal coordinates."""
-
+def parse_gps_coordinates(gps_info: Dict[str, Any]) -> Dict[str, float]:
+    """
+    Decodifica metadatos GPS (tuplas racionales) a grados decimales.
+    """
     if not gps_info:
         return {}
 
-    def _convert(value):
-        grados = value[0][0] / value[0][1]
-        minutos = value[1][0] / value[1][1]
-        segundos = value[2][0] / value[2][1]
-        return grados + minutos / 60 + segundos / 3600
+    def _dms_to_decimal(dms_tuple):
+        degrees = dms_tuple[0][0] / dms_tuple[0][1]
+        minutes = dms_tuple[1][0] / dms_tuple[1][1]
+        seconds = dms_tuple[2][0] / dms_tuple[2][1]
+        return degrees + (minutes / 60) + (seconds / 3600)
 
     try:
-        lat = _convert(gps_info[2])
-        lon = _convert(gps_info[4])
-        if gps_info.get(1) in {b"S", "S"}:
+        # Etiquetas GPS: 1=LatRef, 2=Lat, 3=LonRef, 4=Lon
+        lat = _dms_to_decimal(gps_info[2])
+        lon = _dms_to_decimal(gps_info[4])
+        
+        # Ajuste por hemisferio
+        lat_ref = gps_info.get(1)
+        if lat_ref in {b"S", "S"}:
             lat = -lat
-        if gps_info.get(3) in {b"W", "W"}:
+            
+        lon_ref = gps_info.get(3)
+        if lon_ref in {b"W", "W"}:
             lon = -lon
+            
         return {"GPS_Latitude": lat, "GPS_Longitude": lon}
+        
     except Exception:
+        # Si falla el análisis, devuelve vacío (no romper la ejecución)
         return {}
 
 
-def extract_metadata_auto(path: str | Path) -> Dict[str, Any]:
-    """Detect file type and dispatch to the proper extractor."""
+def extract_metadata_auto(file_path: str | Path) -> Dict[str, Any]:
+    """
+    Punto de entrada principal: detecta el tipo de archivo y llama al extractor apropiado.
+    """
+    safe_path = ensure_readable_file(file_path)
 
-    archivo = ensure_readable_file(path)
-
-    # Check for empty file
-    if archivo.stat().st_size == 0:
+    # Comprobación rápida de archivos vacíos
+    if safe_path.stat().st_size == 0:
         return {
-            "file": archivo.name,
-            "path": str(archivo),
+            "file": safe_path.name,
+            "path": str(safe_path),
             "mime_type": "application/x-empty",
-            "extension": archivo.suffix.lower(),
-            "metadata": {"info": "The file is empty (0 bytes)."},
+            "extension": safe_path.suffix.lower(),
+            "metadata": {"info": "File is empty (0 bytes)."},
         }
 
-    mime = puremagic.from_file(str(archivo), mime=True)
-    extension = archivo.suffix.lower()
+    # Detectar tipo
+    mime_type = puremagic.from_file(str(safe_path), mime=True)
+    extension = safe_path.suffix.lower()
 
-    resultado = {
-        "file": archivo.name,
-        "path": str(archivo),
-        "mime_type": mime,
+    result = {
+        "file": safe_path.name,
+        "path": str(safe_path),
+        "mime_type": mime_type,
         "extension": extension,
         "metadata": {},
     }
 
     try:
-        if mime.startswith("image/"):
-            resultado["metadata"] = extract_metadata_image(archivo)
-        elif mime == "application/pdf":
-            resultado["metadata"] = extract_metadata_pdf(archivo)
-        elif mime in (
+        if mime_type.startswith("image/"):
+            result["metadata"] = extract_metadata_image(safe_path)
+            
+        elif mime_type == "application/pdf":
+            result["metadata"] = extract_metadata_pdf(safe_path)
+            
+        elif mime_type in (
             "application/msword",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         ):
-            resultado["metadata"] = extract_metadata_docx(archivo)
+            result["metadata"] = extract_metadata_docx(safe_path)
+            
         else:
-            resultado["metadata"] = {"info": "Unsupported format"}
-    except Exception as exc:
-        LOGGER.error("Error analyzing %s: %s", archivo, exc)
-        resultado["metadata"] = {"error": str(exc)}
-    return resultado
+            result["metadata"] = {"info": "Format not currently supported for deep analysis."}
+            
+    except Exception as e:
+        logger.error(f"Error analyzing {safe_path}: {e}")
+        result["metadata"] = {"error": str(e)}
+        
+    return result
 
 
 def format_metadata(metadata: Dict[str, Any]) -> str:
-    """Return metadata as a formatted JSON string."""
-
+    """Imprime los metadatos como JSON formateado."""
     return json.dumps(metadata, indent=4, ensure_ascii=False)
-
-
-# Example:
-# >>> print(format_metadata(extract_metadata_auto("/tmp/foto.jpg")))

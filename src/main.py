@@ -8,7 +8,7 @@ from core.detect_extension import (
     get_mime_type,
     suggest_correct_extension,
 )
-from core.file_loader import load_file
+from core.file_loader import load_file_info
 from core.modify_metadata.custom_metadata import (
     apply_custom_docx_metadata,
     apply_custom_image_metadata,
@@ -25,124 +25,178 @@ from core.modify_metadata.wipe_metadata import (
     wipe_metadata_pdf,
 )
 
-MENU = """\nSelect an option:\n1. Analyze metadata\n2. Verify extension/MIME\n3. Wipe metadata\n4. Apply default metadata\n5. Modify custom metadata\n6. Exit\n> """
+# Menú principal de la aplicación
+MAIN_MENU = """
+=== Metadata Analyzer Tool ===
+
+1. Analyze file metadata
+2. Verify file extension consistency
+3. Wipe all metadata
+4. Apply default metadata templates
+5. Set custom metadata fields
+6. Exit
+
+Select an option > """
 
 
-def _prompt_path() -> str:
-    return input("File path: ").strip()
+def get_file_path() -> str:
+    """Pide al usuario la ruta del archivo y limpia la entrada."""
+    return input("Please enter the file path: ").strip()
 
 
-def _handle_analyze() -> None:
-    path = _prompt_path()
+def analyze_metadata_flow() -> None:
+    """Maneja el flujo de análisis de metadatos."""
+    path = get_file_path()
     try:
-        data = extract_metadata_auto(path)
-        print(format_metadata(data))
-    except FileNotFoundError as exc:
-        print(exc)
+        # Extrae los metadatos y los muestra con formato
+        results = extract_metadata_auto(path)
+        print("\n--- Analysis Results ---")
+        print(format_metadata(results))
+        print("------------------------\n")
+    except FileNotFoundError as e:
+        print(f"Oops, couldn't find that file: {e}")
 
 
-def _handle_verify_extension() -> None:
-    path = _prompt_path()
+def verify_extension_flow() -> None:
+    """Comprueba si la extensión del archivo coincide con su contenido real."""
+    path = get_file_path()
     try:
-        mime = get_mime_type(path)
-        matches = extension_matches_mime(path)
+        mime_type = get_mime_type(path)
+        is_match = extension_matches_mime(path)
         suggestion = suggest_correct_extension(path)
-        print(f"Detected MIME type: {mime}")
-        print(f"Extension matches?: {'Yes' if matches else 'No'}")
-        if not matches and suggestion:
-            print(f"Suggested extension: {suggestion}")
-    except FileNotFoundError as exc:
-        print(exc)
+
+        print(f"\nDetected MIME type: {mime_type}")
+        print(f"Extension matches content? {'Yes' if is_match else 'No'}")
+        
+        if not is_match and suggestion:
+            print(f"Tip: It looks like this file should be a {suggestion}")
+        print()
+            
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
 
 
-def _handle_wipe_metadata() -> None:
-    path = _prompt_path()
+def wipe_metadata_flow() -> None:
+    """Elimina los metadatos de los tipos de archivo soportados."""
+    path = get_file_path()
     try:
-        info = load_file(path)
-        if info["type"] == "pdf":
+        file_info = load_file_info(path)
+        file_type = file_info["type"]
+        
+        new_path = None
+        if file_type == "pdf":
             new_path = wipe_metadata_pdf(path)
-        elif info["type"] == "docx":
+        elif file_type == "docx":
             new_path = wipe_metadata_docx(path)
-        elif info["type"] == "image":
+        elif file_type == "image":
             new_path = wipe_metadata_image(path)
         else:
-            print("Unsupported format.")
+            print("Sorry, we don't support wiping metadata for this file type yet.")
             return
-        print(f"Metadata wiped. Generated file: {new_path}")
-    except FileNotFoundError as exc:
-        print(exc)
+
+        print(f"Success! Clean file saved to: {new_path}")
+        
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
 
 
-def _handle_default_metadata() -> None:
-    path = _prompt_path()
+def apply_default_metadata_flow() -> None:
+    """Aplica un conjunto estándar de metadatos al archivo."""
+    path = get_file_path()
     try:
-        info = load_file(path)
-        if info["type"] == "pdf":
+        file_info = load_file_info(path)
+        file_type = file_info["type"]
+        
+        new_path = None
+        if file_type == "pdf":
             new_path = apply_default_pdf_metadata(path)
-        elif info["type"] == "docx":
+        elif file_type == "docx":
             new_path = apply_default_docx_metadata(path)
-        elif info["type"] == "image":
+        elif file_type == "image":
             new_path = apply_default_image_metadata(path)
         else:
-            print("Unsupported format.")
+            print("Unsupported file format for default metadata.")
             return
-        print(f"Default metadata applied. Generated file: {new_path}")
-    except FileNotFoundError as exc:
-        print(exc)
+
+        print(f"Done. File with default metadata created at: {new_path}")
+        
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
 
 
-def _prompt_metadata_dict() -> Dict[str, str]:
-    print("Enter key=value pairs separated by comma. Example: author=John, title=Report")
-    raw = input("> ").strip()
-    result: Dict[str, str] = {}
-    for pair in raw.split(','):
-        if '=' in pair:
-            key, value = pair.split('=', 1)
-            result[key.strip()] = value.strip()
-    return result
+def get_custom_metadata_input() -> Dict[str, str]:
+    """Procesa la entrada del usuario para campos de metadatos personalizados."""
+    print("\nEnter metadata as key=value pairs (separated by commas).")
+    print("Example: author=Jane Doe, title=Final Report")
+    raw_input = input("> ").strip()
+    
+    parsed_data: Dict[str, str] = {}
+    if not raw_input:
+        return parsed_data
+
+    # Divide por comas y luego por el signo igual
+    for item in raw_input.split(','):
+        if '=' in item:
+            key, value = item.split('=', 1)
+            parsed_data[key.strip()] = value.strip()
+            
+    return parsed_data
 
 
-def _handle_custom_metadata() -> None:
-    path = _prompt_path()
-    metadata = _prompt_metadata_dict()
+def apply_custom_metadata_flow() -> None:
+    """Permite al usuario establecer campos de metadatos específicos."""
+    path = get_file_path()
+    metadata = get_custom_metadata_input()
+    
     if not metadata:
-        print("No valid metadata entered.")
+        print("No metadata provided. Aborting.")
         return
+
     try:
-        info = load_file(path)
-        if info["type"] == "pdf":
+        file_info = load_file_info(path)
+        file_type = file_info["type"]
+        
+        new_path = None
+        if file_type == "pdf":
             new_path = apply_custom_pdf_metadata(path, metadata)
-        elif info["type"] == "docx":
+        elif file_type == "docx":
             new_path = apply_custom_docx_metadata(path, metadata)
-        elif info["type"] == "image":
+        elif file_type == "image":
             new_path = apply_custom_image_metadata(path, metadata)
         else:
-            print("Unsupported format.")
+            print("Unsupported file format.")
             return
-        print(f"Custom metadata applied. Generated file: {new_path}")
-    except FileNotFoundError as exc:
-        print(exc)
+
+        print(f"Custom metadata applied! Saved to: {new_path}")
+        
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
 
 
 def main() -> None:
-    actions = {
-        "1": _handle_analyze,
-        "2": _handle_verify_extension,
-        "3": _handle_wipe_metadata,
-        "4": _handle_default_metadata,
-        "5": _handle_custom_metadata,
+    """Bucle principal de la aplicación."""
+    menu_options = {
+        "1": analyze_metadata_flow,
+        "2": verify_extension_flow,
+        "3": wipe_metadata_flow,
+        "4": apply_default_metadata_flow,
+        "5": apply_custom_metadata_flow,
     }
+    
     while True:
-        choice = input(MENU).strip()
-        if choice == "6":
-            print("Exiting...")
+        user_choice = input(MAIN_MENU).strip()
+        
+        if user_choice == "6":
+            print("See you later!")
             break
-        action = actions.get(choice)
+            
+        action = menu_options.get(user_choice)
         if action:
             action()
         else:
-            print("Invalid option.")
+            print("Invalid selection, please try again.")
 
 
 if __name__ == "__main__":
     main()
+

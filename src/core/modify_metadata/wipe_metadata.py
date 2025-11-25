@@ -1,4 +1,6 @@
-"""Routines to remove metadata from supported files."""
+"""
+Rutinas para eliminar metadatos de archivos soportados.
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -11,28 +13,39 @@ from docx import Document
 from .utils_modifier import ensure_editable_file, ensure_output_path
 
 
-def wipe_metadata_pdf(path: str | Path, destination: Optional[str | Path] = None) -> Path:
-    """Remove PDF metadata by rewriting the document."""
-
-    source = ensure_editable_file(path)
-    output = ensure_output_path(source, destination, suffix="_clean")
-    reader = PdfReader(str(source))
+def wipe_metadata_pdf(file_path: str | Path, destination: Optional[str | Path] = None) -> Path:
+    """
+    Elimina los metadatos del PDF reescribiendo el documento con un diccionario de metadatos vacío.
+    """
+    source_file = ensure_editable_file(file_path)
+    output_file = ensure_output_path(source_file, destination, suffix="_clean")
+    
+    reader = PdfReader(str(source_file))
     writer = PdfWriter()
+    
     for page in reader.pages:
         writer.add_page(page)
+        
+    # Sobrescribe los metadatos con un diccionario vacío
     writer.add_metadata({})
-    with output.open("wb") as handler:
-        writer.write(handler)
-    return output
+    
+    with output_file.open("wb") as f:
+        writer.write(f)
+        
+    return output_file
 
 
-def wipe_metadata_docx(path: str | Path, destination: Optional[str | Path] = None) -> Path:
-    """Remove DOCX core properties."""
-
-    source = ensure_editable_file(path)
-    output = ensure_output_path(source, destination, suffix="_clean")
-    document = Document(str(source))
-    props = document.core_properties
+def wipe_metadata_docx(file_path: str | Path, destination: Optional[str | Path] = None) -> Path:
+    """
+    Borra todas las propiedades principales estándar de DOCX.
+    """
+    source_file = ensure_editable_file(file_path)
+    output_file = ensure_output_path(source_file, destination, suffix="_clean")
+    
+    doc = Document(str(source_file))
+    props = doc.core_properties
+    
+    # Deja en blanco los campos comunes
     props.author = ""
     props.title = ""
     props.subject = ""
@@ -40,18 +53,23 @@ def wipe_metadata_docx(path: str | Path, destination: Optional[str | Path] = Non
     props.category = ""
     props.keywords = ""
     props.last_modified_by = ""
-    document.save(str(output))
-    return output
+    
+    doc.save(str(output_file))
+    return output_file
 
 
-def wipe_metadata_image(path: str | Path, destination: Optional[str | Path] = None) -> Path:
-    """Create a copy of the image without EXIF data."""
-
-    source = ensure_editable_file(path)
-    output = ensure_output_path(source, destination, suffix="_clean")
-    with Image.open(str(source)) as img:
+def wipe_metadata_image(file_path: str | Path, destination: Optional[str | Path] = None) -> Path:
+    """
+    Crea una copia de la imagen sin datos EXIF copiando los datos de píxeles a una nueva imagen.
+    """
+    source_file = ensure_editable_file(file_path)
+    output_file = ensure_output_path(source_file, destination, suffix="_clean")
+    
+    with Image.open(str(source_file)) as img:
+        # Copia los datos de píxeles a un nuevo objeto de imagen para eliminar los metadatos
         data = list(img.getdata())
-        clean = Image.new(img.mode, img.size)
-        clean.putdata(data)
-        clean.save(str(output), format=img.format)
-    return output
+        clean_img = Image.new(img.mode, img.size)
+        clean_img.putdata(data)
+        clean_img.save(str(output_file), format=img.format)
+        
+    return output_file
