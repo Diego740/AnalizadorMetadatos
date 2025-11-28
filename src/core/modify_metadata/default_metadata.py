@@ -19,8 +19,8 @@ DEFAULT_TITLE = "Processed Document"
 
 
 def _get_current_timestamp() -> str:
-    """Devuelve la marca de tiempo UTC actual en un formato estándar."""
-    return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    """Devuelve la marca de tiempo UTC en un formato estándar."""
+    return datetime.utcnow().strftime("%Y:%m:%d 00:00:00")
 
 
 def apply_default_pdf_metadata(file_path: str | Path, destination: Optional[str | Path] = None) -> Path:

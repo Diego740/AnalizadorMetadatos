@@ -17,6 +17,7 @@ from PIL.ExifTags import TAGS
 from PyPDF2 import PdfReader
 from docx import Document
 import piexif
+import piexif.helper
 from pillow_heif import register_heif_opener
 
 from utils.logger import get_logger
@@ -131,6 +132,20 @@ def extract_metadata_image(file_path: str | Path) -> Dict[str, Any]:
                             if "GPS" not in metadata:
                                 metadata["GPS"] = {}
                             metadata["GPS"][tag_name] = _sanitize_exif_value(value)
+                        elif tag_name == "UserComment":
+                            # Intentar parsear UserComment como JSON para metadatos personalizados
+                            try:
+                                # UserComment suele venir como bytes con prefijo
+                                comment = piexif.helper.UserComment.load(value)
+                                if comment:
+                                    custom_data = json.loads(comment)
+                                    if isinstance(custom_data, dict):
+                                        metadata.update(custom_data)
+                                    else:
+                                        metadata["UserComment"] = comment
+                            except Exception:
+                                # Si falla, guardar como string normal
+                                metadata[tag_name] = _sanitize_exif_value(value)
                         else:
                             metadata[tag_name] = _sanitize_exif_value(value)
             
@@ -149,7 +164,16 @@ def extract_metadata_image(file_path: str | Path) -> Dict[str, Any]:
             for tag_id, value in exif.items():
                 tag_name = TAGS.get(tag_id, str(tag_id))
                 metadata[tag_name] = _sanitize_exif_value(value)
-        else:
+        
+        # Leer metadatos adicionales de img.info (ej. PNG text chunks)
+        # Filtramos claves binarias o internas grandes
+        ignored_keys = {"exif", "icc_profile", "photoshop", "xml:com.adobe.xmp"}
+        for key, value in img.info.items():
+            if key.lower() not in ignored_keys and isinstance(value, (str, int, float)):
+                metadata[key] = value
+
+        if not exif and not metadata.get("info") and len(metadata) <= 1:
+             # Si solo tenemos "Format" y nada más
             metadata["info"] = "No EXIF data found in image."
             
     except Exception as e:
