@@ -263,6 +263,17 @@ def extract_metadata_auto(file_path: str | Path) -> Dict[str, Any]:
         else:
             result["metadata"] = {"info": "Format not currently supported for deep analysis."}
             
+        # --- Security Analysis Integration ---
+        try:
+            from security import analyze_risk
+        except ImportError:
+            # Fallback for when running from project root
+            from src.security import analyze_risk
+            
+        security_report = analyze_risk(safe_path, result["metadata"], mime_type)
+        if security_report["is_suspicious"]:
+            result["security_analysis"] = security_report
+            
     except Exception as e:
         logger.error(f"Error analyzing {safe_path}: {e}")
         result["metadata"] = {"error": str(e)}
