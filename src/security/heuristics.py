@@ -29,7 +29,7 @@ PDF_THREAT_KEYWORDS = {
     b"/JavaScript": "Contiene código JavaScript",
     b"/JS": "Contiene código JavaScript",
     b"/OpenAction": "Ejecuta una acción al abrir el documento",
-    b"/AA": "Contiene acciones automáticas (AutoAction)",
+    #b"/AA": "Contiene acciones automáticas (AutoAction)",
     b"/Launch": "Intenta lanzar un programa externo",
     b"/RichMedia": "Contenido multimedia enriquecido (posible vector de ataque)",
 }
