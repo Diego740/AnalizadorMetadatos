@@ -15,10 +15,32 @@ from utils.path_tools import ensure_readable_file
 def get_mime_type(file_path: str | Path) -> Optional[str]:
     """
     Devuelve el tipo MIME reportado por libmagic.
+    Si hay múltiples coincidencias, prioriza la que coincida con la extensión del archivo.
     """
     try:
         safe_path = ensure_readable_file(file_path)
-        return puremagic.from_file(str(safe_path), mime=True)
+        # Usamos magic_file para obtener todas las posibles coincidencias con confianza
+        matches = puremagic.magic_file(str(safe_path))
+        
+        if not matches:
+            return None
+            
+        # Si solo hay una coincidencia, la devolvemos
+        if len(matches) == 1:
+            return matches[0].mime_type
+            
+        # Si hay múltiples, buscamos si alguna coincide con la extensión actual
+        current_ext = safe_path.suffix.lower()
+        expected_mime = EXTENSIONES_MIME.get(current_ext)
+        
+        if expected_mime:
+            for match in matches:
+                if match.mime_type == expected_mime:
+                    return match.mime_type
+                    
+        # Si no hay coincidencia con la extensión, devolvemos la de mayor confianza (la primera)
+        return matches[0].mime_type
+        
     except FileNotFoundError:
         raise
     except Exception:

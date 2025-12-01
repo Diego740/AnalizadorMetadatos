@@ -81,7 +81,7 @@ def apply_default_image_metadata(file_path: str | Path, destination: Optional[st
     with Image.open(str(source_file)) as img:
         format_name = (img.format or "").upper()
         
-        if format_name in {"JPEG", "JPG", "TIFF"}:
+        if format_name in {"JPEG", "JPG", "TIFF", "HEIC", "HEIF"}:
             # Crea un bloque EXIF limpio
             exif_dict = {
                 "0th": {

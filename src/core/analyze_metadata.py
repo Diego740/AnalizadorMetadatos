@@ -233,7 +233,10 @@ def extract_metadata_auto(file_path: str | Path) -> Dict[str, Any]:
         }
 
     # Detectar tipo
-    mime_type = puremagic.from_file(str(safe_path), mime=True)
+    from .detect_extension import get_mime_type
+    mime_type = get_mime_type(safe_path)
+    if mime_type is None:
+        mime_type = "application/octet-stream"
     extension = safe_path.suffix.lower()
 
     result = {

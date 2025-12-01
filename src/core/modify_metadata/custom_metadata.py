@@ -95,7 +95,7 @@ def apply_custom_image_metadata(
     with Image.open(str(source_file)) as img:
         format_name = (img.format or "").upper()
         
-        if format_name in {"JPEG", "JPG", "TIFF", "MPO"}:
+        if format_name in {"JPEG", "JPG", "TIFF", "MPO", "HEIC", "HEIF"}:
             # Maneja EXIF para JPEGs
             try:
                 exif_dict = piexif.load(img.info.get("exif", b""))
