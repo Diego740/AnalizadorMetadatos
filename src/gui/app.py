@@ -28,6 +28,10 @@ from core.modify_metadata.wipe_metadata import (
     wipe_metadata_pdf,
 )
 from core.file_loader import load_file_info
+from core.detect_extension import (
+    extension_matches_mime,
+    suggest_correct_extension
+)
 
 # --- Constants & Config ---
 APP_TITLE = "ANALIZADOR METADATOS"
@@ -254,45 +258,60 @@ class ResultsFrame(tk.Frame):
         self.txt_console.delete("1.0", tk.END)
         self.txt_console.config(state="disabled")
 
-    def format_json_colored(self, data, indent=0):
+    def format_json_colored(self, data, indent=0, override_tag=None):
         """Recursively formats dictionary as colored JSON."""
         spaces = " " * (indent * 4)
         
         if isinstance(data, dict):
-            self.append_log("{\n", "bracket")
+            self.append_log("{\n", override_tag or "bracket")
             for i, (key, value) in enumerate(data.items()):
                 self.append_log(spaces + "    ")
-                self.append_log(f'"{key}"', "key")
-                self.append_log(": ", "info")
-                self.format_json_colored(value, indent + 1)
-                if i < len(data) - 1:
-                    self.append_log(",\n", "info")
+                
+                # Special handling for security analysis
+                current_tag = override_tag
+                if key == "security_analysis":
+                    # Check if it's actually suspicious before highlighting
+                    if isinstance(value, dict) and value.get("is_suspicious"):
+                        current_tag = "warning"
+                        self.append_log(f'"{key}"', "warning")
+                    else:
+                        self.append_log(f'"{key}"', "key")
                 else:
-                    self.append_log("\n", "info")
-            self.append_log(spaces + "}", "bracket")
+                    self.append_log(f'"{key}"', override_tag or "key")
+                    
+                self.append_log(": ", override_tag or "info")
+                
+                # Pass the current tag down (if it's warning, everything inside is warning)
+                self.format_json_colored(value, indent + 1, current_tag)
+                
+                if i < len(data) - 1:
+                    self.append_log(",\n", override_tag or "info")
+                else:
+                    self.append_log("\n", override_tag or "info")
+            self.append_log(spaces + "}", override_tag or "bracket")
             
         elif isinstance(data, list):
-            self.append_log("[\n", "bracket")
+            self.append_log("[\n", override_tag or "bracket")
             for i, item in enumerate(data):
                 self.append_log(spaces + "    ")
-                self.format_json_colored(item, indent + 1)
+                self.format_json_colored(item, indent + 1, override_tag)
                 if i < len(data) - 1:
-                    self.append_log(",\n", "info")
+                    self.append_log(",\n", override_tag or "info")
                 else:
-                    self.append_log("\n", "info")
-            self.append_log(spaces + "]", "bracket")
+                    self.append_log("\n", override_tag or "info")
+            self.append_log(spaces + "]", override_tag or "bracket")
             
         elif isinstance(data, str):
-            self.append_log(f'"{data}"', "string")
+            self.append_log(f'"{data}"', override_tag or "string")
             
         elif isinstance(data, (int, float)):
-            self.append_log(f"{data}", "number")
+            self.append_log(f"{data}", override_tag or "number")
             
         elif data is None:
-            self.append_log("null", "number")
+            self.append_log("null", override_tag or "number")
             
         else:
-            self.append_log(str(data), "info")
+            self.append_log(str(data), override_tag or "info")
 
     def run_analysis(self, path):
         """Runs the actual analysis and updates console."""
@@ -302,6 +321,22 @@ class ResultsFrame(tk.Frame):
         
         self.append_log(f"--- Analysis Results ---\n", "header")
         
+        # Check for extension mismatch
+        try:
+            if not extension_matches_mime(path):
+                suggestion = suggest_correct_extension(path)
+                msg = f"Warning: The file extension does not match its content."
+                if suggestion:
+                    msg += f"\nSuggested extension: {suggestion}"
+                
+                # Log to console
+                self.append_log(f"WARNING: {msg}\n", "warning")
+                
+                # Show popup
+                messagebox.showwarning("Extension Mismatch", msg)
+        except Exception as e:
+            self.append_log(f"Error checking extension: {e}\n", "error")
+
         try:
             # Run the actual analysis
             result = extract_metadata_auto(path)
@@ -466,9 +501,19 @@ class CustomMetadataFrame(tk.Frame):
         
         self.next_row = row
         
-        # Add button at the bottom
-        self.btn_add = ttk.Button(self.scrollable_frame, text="+", width=5, command=self.add_field)
-        self.btn_add.grid(row=self.next_row, column=1, sticky="e", pady=10)
+        # Check file type to conditionally show Add button
+        file_path = self.controller.get_selected_file()
+        ext = os.path.splitext(file_path)[1].lower()
+        
+        if ext in [".docx", ".doc"]:
+            # For DOCX, we restrict adding new fields
+            lbl_info = tk.Label(self.scrollable_frame, text="(DOCX: Only existing fields can be modified)", 
+                                bg=BG_COLOR, fg="#A0A0A0", font=("Helvetica", 10, "italic"))
+            lbl_info.grid(row=self.next_row, column=0, columnspan=2, pady=10)
+        else:
+            # For other files, allow adding new fields
+            self.btn_add = ttk.Button(self.scrollable_frame, text="+", width=5, command=self.add_field)
+            self.btn_add.grid(row=self.next_row, column=1, sticky="e", pady=10)
 
     def _create_row(self, row, key_text="", val_text=""):
         key_entry = ttk.Entry(self.scrollable_frame, width=20)
