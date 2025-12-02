@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import json
+import webbrowser
 
 from ..config import BG_COLOR, APP_TITLE
 
@@ -66,6 +67,12 @@ class ResultsFrame(tk.Frame):
         self.txt_console.tag_config("error", foreground="#F44747")     # Red
         self.txt_console.tag_config("warning", foreground="#CCA700")   # Dark Yellow
         self.txt_console.tag_config("info", foreground="#D4D4D4")      # Default
+        
+        # Hyperlink tag
+        self.txt_console.tag_config("hyperlink", foreground="#4FC1FF", underline=1)
+        self.txt_console.tag_bind("hyperlink", "<Button-1>", self.open_url)
+        self.txt_console.tag_bind("hyperlink", "<Enter>", lambda e: self.txt_console.config(cursor="hand2"))
+        self.txt_console.tag_bind("hyperlink", "<Leave>", lambda e: self.txt_console.config(cursor=""))
 
         # Buttons Area
         btn_frame = tk.Frame(self, bg=BG_COLOR)
@@ -103,6 +110,20 @@ class ResultsFrame(tk.Frame):
         self.txt_console.config(state="normal")
         self.txt_console.delete("1.0", tk.END)
         self.txt_console.config(state="disabled")
+
+    def open_url(self, event):
+        """Opens the clicked URL in the default browser."""
+        try:
+            index = self.txt_console.index(f"@{event.x},{event.y}")
+            tags = self.txt_console.tag_names(index)
+            if "hyperlink" in tags:
+                # Get the text range of the link
+                start = self.txt_console.tag_prevrange("hyperlink", index + "+1c")
+                if start:
+                    url = self.txt_console.get(start[0], start[1]).strip('"')
+                    webbrowser.open(url)
+        except Exception as e:
+            print(f"Error opening URL: {e}")
 
     def format_json_colored(self, data, indent=0, override_tag=None):
         """Recursively formats dictionary as colored JSON."""
@@ -148,7 +169,11 @@ class ResultsFrame(tk.Frame):
             self.append_log(spaces + "]", override_tag or "bracket")
             
         elif isinstance(data, str):
-            self.append_log(f'"{data}"', override_tag or "string")
+            # Check for URL
+            if data.startswith("http://") or data.startswith("https://"):
+                self.append_log(f'"{data}"', "hyperlink")
+            else:
+                self.append_log(f'"{data}"', override_tag or "string")
             
         elif isinstance(data, (int, float)):
             self.append_log(f"{data}", override_tag or "number")
