@@ -131,6 +131,9 @@ def extract_metadata_image(file_path: str | Path) -> Dict[str, Any]:
                         if ifd_name == "GPS":
                             if "GPS" not in metadata:
                                 metadata["GPS"] = {}
+                            # Ensure it's a dict before assigning
+                            if not isinstance(metadata["GPS"], dict):
+                                metadata["GPS"] = {}
                             metadata["GPS"][tag_name] = _sanitize_exif_value(value)
                         elif tag_name == "UserComment":
                             # Intentar parsear UserComment como JSON para metadatos personalizados
@@ -147,6 +150,9 @@ def extract_metadata_image(file_path: str | Path) -> Dict[str, Any]:
                                 # Si falla, guardar como string normal
                                 metadata[tag_name] = _sanitize_exif_value(value)
                         else:
+                            # Avoid collision: 0th IFD has a tag named "GPS" (offset), which would overwrite our GPS dict
+                            if tag_name == "GPS":
+                                tag_name = "GPSOffset"
                             metadata[tag_name] = _sanitize_exif_value(value)
             
             # Procesa las coordenadas GPS si están disponibles
