@@ -35,8 +35,12 @@ def apply_custom_pdf_metadata(
     for page in reader.pages:
         writer.add_page(page)
         
-    # Añade nuevos metadatos (las claves PDF suelen empezar con /)
-    writer.add_metadata({f"/{k}": v for k, v in normalized_data.items()})
+    # Obtiene metadatos existentes y los fusiona con los nuevos
+    metadata_to_write = dict(reader.metadata) if reader.metadata else {}
+    for k, v in normalized_data.items():
+        metadata_to_write[f"/{k}"] = v
+        
+    writer.add_metadata(metadata_to_write)
     
     with output_file.open("wb") as f:
         writer.write(f)
