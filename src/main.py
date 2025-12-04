@@ -173,8 +173,8 @@ def apply_custom_metadata_flow() -> None:
         print(f"Error: {e}")
 
 
-def main() -> None:
-    """Bucle principal de la aplicación."""
+def run_cli() -> None:
+    """Bucle principal de la aplicación en modo consola."""
     menu_options = {
         "1": analyze_metadata_flow,
         "2": verify_extension_flow,
@@ -195,6 +195,34 @@ def main() -> None:
             action()
         else:
             print("Invalid selection, please try again.")
+
+
+def run_gui() -> None:
+    """Inicia la aplicación en modo gráfico (GUI)."""
+    try:
+        # Importación local para evitar dependencias circulares o errores si no hay GUI
+        from gui.main_window import MetadataAnalyzerApp
+        app = MetadataAnalyzerApp()
+        app.mainloop()
+    except ImportError as e:
+        print(f"Error launching GUI: {e}")
+        print("Make sure you have all dependencies installed.")
+
+
+def main() -> None:
+    """Punto de entrada principal que procesa argumentos."""
+    import argparse
+    import sys
+    
+    parser = argparse.ArgumentParser(description="Metadata Analyzer Tool")
+    parser.add_argument("-g", "--gui", action="store_true", help="Launch the Graphical User Interface")
+    
+    args = parser.parse_args()
+    
+    if args.gui:
+        run_gui()
+    else:
+        run_cli()
 
 
 if __name__ == "__main__":
