@@ -148,7 +148,7 @@ def apply_custom_image_metadata(
                 img.save(str(output_file), format=img.format, exif=exif_bytes)
             except Exception as e:
                 print(f"Error saving EXIF data: {e}")
-                # Fallback: save without EXIF if dump fails
+                # Respaldo: guardar sin EXIF si falla el volcado
                 img.save(str(output_file), format=img.format)
             
         else:

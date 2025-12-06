@@ -1,4 +1,4 @@
-"""MIME helpers shared across the application."""
+"""Ayudantes MIME compartidos en toda la aplicación."""
 from __future__ import annotations
 
 from typing import Optional
@@ -27,7 +27,7 @@ EXTENSIONES_MIME: dict[str, str] = {
 
 
 def guess_extension_from_mime(mime: str) -> Optional[str]:
-    """Return the first extension that matches *mime* or ``None``."""
+    """Devuelve la primera extensión que coincide con *mime* o ``None``."""
 
     mime = (mime or "").lower()
     for ext, expected in EXTENSIONES_MIME.items():

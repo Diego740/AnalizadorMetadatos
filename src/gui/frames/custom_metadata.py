@@ -146,8 +146,7 @@ class CustomMetadataFrame(tk.Frame):
 
             if output_path:
                 messagebox.showinfo("Success", f"Metadata saved successfully!\n\nNew file created at:\n{output_path}")
-                # Update controller to point to new file? Or keep original?
-                # Usually better to switch to the new file so we see the results
+                # Show new file with results
                 self.controller.selected_file_path.set(str(output_path))
                 self.controller.show_frame("ResultsFrame")
                 

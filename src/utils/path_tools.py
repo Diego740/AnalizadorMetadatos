@@ -1,31 +1,31 @@
-"""Utilities to work with filesystem paths."""
+"""Utilidades para trabajar con rutas del sistema de archivos."""
 from __future__ import annotations
 
 from pathlib import Path
 
 
 def resolve_path(path: str | Path) -> Path:
-    """Return an absolute :class:`Path` instance for *path*.
+    """Devuelve una instancia absoluta de :class:`Path` para *path*.
 
-    The function does not require that the file exists. It simply
-    resolves the user provided path so that higher level helpers can
-    work with a canonical location.
+    La función no requiere que el archivo exista. Simplemente
+    resuelve la ruta proporcionada por el usuario para que los ayudantes de nivel superior
+    puedan trabajar con una ubicación canónica.
     """
 
     return Path(path).expanduser().resolve()
 
 
 def file_exists(path: str | Path) -> bool:
-    """Return ``True`` if *path* is an existing regular file."""
+    """Devuelve ``True`` si *path* es un archivo regular existente."""
 
     return resolve_path(path).is_file()
 
 
 def ensure_readable_file(path: str | Path) -> Path:
-    """Validate that *path* is a readable file and return it.
+    """Valida que *path* es un archivo legible y lo devuelve.
 
     Raises:
-        FileNotFoundError: If the path does not exist or is not a file.
+        FileNotFoundError: Si la ruta no existe o no es un archivo.
     """
 
     resolved = resolve_path(path)

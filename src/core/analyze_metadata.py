@@ -63,7 +63,7 @@ def extract_metadata_pdf(file_path: str | Path) -> Dict[str, Any]:
             pdf = PdfReader(f)
             info = pdf.metadata or {}
             
-            # Limpia las claves (elimina la barra inicial común en diccionarios PDF)
+            #Elimina / inicial
             for key, value in info.items():
                 clean_key = key.strip("/")
                 metadata[clean_key] = str(value)
@@ -131,7 +131,7 @@ def extract_metadata_image(file_path: str | Path) -> Dict[str, Any]:
                         if ifd_name == "GPS":
                             if "GPS" not in metadata:
                                 metadata["GPS"] = {}
-                            # Ensure it's a dict before assigning
+                            # Se asegura de que sea un diccionario antes de asignar
                             if not isinstance(metadata["GPS"], dict):
                                 metadata["GPS"] = {}
                             metadata["GPS"][tag_name] = _sanitize_exif_value(value)
@@ -150,7 +150,7 @@ def extract_metadata_image(file_path: str | Path) -> Dict[str, Any]:
                                 # Si falla, guardar como string normal
                                 metadata[tag_name] = _sanitize_exif_value(value)
                         else:
-                            # Avoid collision: 0th IFD has a tag named "GPS" (offset), which would overwrite our GPS dict
+                            # Evita colisión: El IFD 0 tiene una etiqueta llamada "GPS" (offset), que sobrescribiría nuestro diccionario GPS
                             if tag_name == "GPS":
                                 tag_name = "GPSOffset"
                             metadata[tag_name] = _sanitize_exif_value(value)
@@ -269,11 +269,11 @@ def extract_metadata_auto(file_path: str | Path) -> Dict[str, Any]:
         else:
             result["metadata"] = {"info": "Format not currently supported for deep analysis."}
             
-        # --- Security Analysis Integration ---
+        # --- Integración de Análisis de Seguridad ---
         try:
             from security import analyze_risk
         except ImportError:
-            # Fallback for when running from project root
+            # Respaldo para cuando se ejecuta desde la raíz del proyecto
             from src.security import analyze_risk
             
         security_report = analyze_risk(safe_path, result["metadata"], mime_type)
