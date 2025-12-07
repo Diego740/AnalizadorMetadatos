@@ -43,13 +43,13 @@ def check_metadata_risk(metadata: Dict[str, Any]) -> List[str]:
     """
     indicators = []
 
-    def _recursive_scan(value: Any, path: str = ""):
+    def recursive_scan(value: Any, path: str = ""):
         if isinstance(value, dict):
             for k, v in value.items():
-                _recursive_scan(v, f"{path}.{k}" if path else k)
+                recursive_scan(v, f"{path}.{k}" if path else k)
         elif isinstance(value, list):
             for i, v in enumerate(value):
-                _recursive_scan(v, f"{path}[{i}]")
+                recursive_scan(v, f"{path}[{i}]")
         elif isinstance(value, str):
             # Comprobación de longitud excesiva (posible buffer overflow o payload oculto)
             # 5000 es un límite arbitrario pero razonable para metadatos normales
@@ -61,7 +61,7 @@ def check_metadata_risk(metadata: Dict[str, Any]) -> List[str]:
                 if re.search(pattern, value, re.IGNORECASE):
                     indicators.append(f"Detectado '{desc}' en '{path}'")
 
-    _recursive_scan(metadata)
+    recursive_scan(metadata)
     return indicators
 
 
@@ -73,14 +73,14 @@ def check_file_risk(file_path: Path, mime_type: str) -> List[str]:
     
     try:
         if mime_type == "application/pdf":
-            indicators.extend(_scan_pdf_structure(file_path))
+            indicators.extend(scan_pdf_structure(file_path))
             
         elif mime_type in (
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document", # docx
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",      # xlsx
             "application/vnd.openxmlformats-officedocument.presentationml.presentation" # pptx
         ):
-            indicators.extend(_scan_office_structure(file_path))
+            indicators.extend(scan_office_structure(file_path))
             
     except Exception as e:
         indicators.append(f"Error al analizar estructura del archivo: {e}")
@@ -88,7 +88,7 @@ def check_file_risk(file_path: Path, mime_type: str) -> List[str]:
     return indicators
 
 
-def _scan_pdf_structure(file_path: Path) -> List[str]:
+def scan_pdf_structure(file_path: Path) -> List[str]:
     """Escaneo básico de estructura PDF."""
     indicators = []
     try:
@@ -124,7 +124,7 @@ def _scan_pdf_structure(file_path: Path) -> List[str]:
     return list(set(indicators)) # Eliminar duplicados
 
 
-def _scan_office_structure(file_path: Path) -> List[str]:
+def scan_office_structure(file_path: Path) -> List[str]:
     """Escaneo de estructura Office (ZIP)."""
     indicators = []
     try:

@@ -28,7 +28,7 @@ register_heif_opener()
 
 
 
-def _sanitize_exif_value(value: Any) -> Any:
+def sanitize_exif_value(value: Any) -> Any:
     """
     Ayuda a convertir datos EXIF en formatos compatibles con JSON.
     Maneja la decodificación de bytes y estructuras recursivas.
@@ -41,13 +41,13 @@ def _sanitize_exif_value(value: Any) -> Any:
             return repr(value)
             
     if isinstance(value, tuple):
-        return tuple(_sanitize_exif_value(v) for v in value)
+        return tuple(sanitize_exif_value(v) for v in value)
         
     if isinstance(value, list):
-        return [_sanitize_exif_value(v) for v in value]
+        return [sanitize_exif_value(v) for v in value]
         
     if isinstance(value, dict):
-        return {k: _sanitize_exif_value(v) for k, v in value.items()}
+        return {k: sanitize_exif_value(v) for k, v in value.items()}
         
     return value
 
@@ -133,7 +133,7 @@ def extract_metadata_image(file_path: str | Path) -> Dict[str, Any]:
                             # Se asegura de que sea un diccionario antes de asignar
                             if not isinstance(metadata["GPS"], dict):
                                 metadata["GPS"] = {}
-                            metadata["GPS"][tag_name] = _sanitize_exif_value(value)
+                            metadata["GPS"][tag_name] = sanitize_exif_value(value)
                         elif tag_name == "UserComment":
                             # Intentar parsear UserComment como JSON para metadatos personalizados
                             try:
@@ -147,12 +147,12 @@ def extract_metadata_image(file_path: str | Path) -> Dict[str, Any]:
                                         metadata["UserComment"] = comment
                             except Exception:
                                 # Si falla, guardar como string normal
-                                metadata[tag_name] = _sanitize_exif_value(value)
+                                metadata[tag_name] = sanitize_exif_value(value)
                         else:
                             # Evita colisión: El IFD 0 tiene una etiqueta llamada "GPS" (offset), que sobrescribiría nuestro diccionario GPS
                             if tag_name == "GPS":
                                 tag_name = "GPSOffset"
-                            metadata[tag_name] = _sanitize_exif_value(value)
+                            metadata[tag_name] = sanitize_exif_value(value)
             
             # Procesa las coordenadas GPS si están disponibles
             coords = parse_gps_coordinates(exif_data.get("GPS", {}))
@@ -168,7 +168,7 @@ def extract_metadata_image(file_path: str | Path) -> Dict[str, Any]:
         if exif:
             for tag_id, value in exif.items():
                 tag_name = TAGS.get(tag_id, str(tag_id))
-                metadata[tag_name] = _sanitize_exif_value(value)
+                metadata[tag_name] = sanitize_exif_value(value)
         
         # Leer metadatos adicionales de img.info (ej. PNG text chunks)
         # Filtramos claves binarias o internas grandes
@@ -194,7 +194,7 @@ def parse_gps_coordinates(gps_info: Dict[str, Any]) -> Dict[str, float]:
     if not gps_info:
         return {}
 
-    def _dms_to_decimal(dms_tuple):
+    def dms_to_decimal(dms_tuple):
         degrees = dms_tuple[0][0] / dms_tuple[0][1]
         minutes = dms_tuple[1][0] / dms_tuple[1][1]
         seconds = dms_tuple[2][0] / dms_tuple[2][1]
@@ -202,8 +202,8 @@ def parse_gps_coordinates(gps_info: Dict[str, Any]) -> Dict[str, float]:
 
     try:
         # Etiquetas GPS: 1=LatRef, 2=Lat, 3=LonRef, 4=Lon
-        lat = _dms_to_decimal(gps_info[2])
-        lon = _dms_to_decimal(gps_info[4])
+        lat = dms_to_decimal(gps_info[2])
+        lon = dms_to_decimal(gps_info[4])
         
         # Ajuste por hemisferio
         lat_ref = gps_info.get(1)
