@@ -15,7 +15,7 @@ La herramienta permite realizar varias operaciones sobre los metadatos de los ar
 ### Formatos Soportados
 *   **PDF** (`.pdf`)
 *   **Microsoft Word** (`.docx`)
-*   **Imágenes** (Formatos soportados por Pillow, e.g., `.jpg`, `.png`, `.heic`)
+*   **Imágenes** (Formatos soportados por Pillow, ej, `.jpg`, `.png`, `.heic`)
 
 ## Requisitos
 
@@ -27,7 +27,7 @@ La herramienta permite realizar varias operaciones sobre los metadatos de los ar
     *   `PyPDF2`
     *   `python-docx`
 
-## 🚀 Instalación
+## Instalación
 
 1.  Clona este repositorio o descarga el código fuente.
 2.  Instala las dependencias necesarias ejecutando:
