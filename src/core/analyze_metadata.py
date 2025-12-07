@@ -20,13 +20,12 @@ import piexif
 import piexif.helper
 from pillow_heif import register_heif_opener
 
-from utils.logger import get_logger
 from utils.path_tools import ensure_readable_file
 
 # Habilita el soporte HEIC para Pillow
 register_heif_opener()
 
-logger = get_logger(__name__)
+
 
 
 def _sanitize_exif_value(value: Any) -> Any:
@@ -281,7 +280,7 @@ def extract_metadata_auto(file_path: str | Path) -> Dict[str, Any]:
             result["security_analysis"] = security_report
             
     except Exception as e:
-        logger.error(f"Error analyzing {safe_path}: {e}")
+        print(f"Error analyzing {safe_path}: {e}")
         result["metadata"] = {"error": str(e)}
         
     return result
