@@ -278,6 +278,20 @@ def extract_metadata_auto(file_path: str | Path) -> Dict[str, Any]:
         security_report = analyze_risk(safe_path, result["metadata"], mime_type)
         if security_report["is_suspicious"]:
             result["security_analysis"] = security_report
+
+        # --- Integración de Análisis ML (Semáforo de Riesgo) ---
+        try:
+            try:
+                from security.ml_analyzer import analizar_riesgo_ml
+            except ImportError:
+                from src.security.ml_analyzer import analizar_riesgo_ml
+
+            result["ml_risk_analysis"] = analizar_riesgo_ml(result)
+        except FileNotFoundError:
+            # El modelo aún no ha sido entrenado — se omite sin error
+            pass
+        except Exception as e:
+            print(f"Aviso: análisis ML no disponible ({e})")
             
     except Exception as e:
         print(f"Error analyzing {safe_path}: {e}")

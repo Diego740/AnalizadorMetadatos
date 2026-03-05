@@ -2,6 +2,7 @@
 archivosTest/
 .vscode
 .DS_Store
+train_anomaly_model.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

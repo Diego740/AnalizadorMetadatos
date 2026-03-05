@@ -68,6 +68,16 @@ class ResultsFrame(tk.Frame):
         self.txt_console.tag_config("warning", foreground="#CCA700")   # Dark Yellow
         self.txt_console.tag_config("info", foreground="#D4D4D4")      # Default
         
+        # Semáforo ML — tags de riesgo
+        self.txt_console.tag_config("risk_green", foreground="#1E1E1E", background="#4EC959",
+                                    font=("Menlo", 13, "bold"))
+        self.txt_console.tag_config("risk_yellow", foreground="#1E1E1E", background="#F0C040",
+                                    font=("Menlo", 13, "bold"))
+        self.txt_console.tag_config("risk_red", foreground="#FFFFFF", background="#E04040",
+                                    font=("Menlo", 13, "bold"))
+        self.txt_console.tag_config("risk_detail", foreground="#B0B0B0",
+                                    font=("Menlo", 10))
+        
         # Hyperlink tag
         self.txt_console.tag_config("hyperlink", foreground="#4FC1FF", underline=1)
         self.txt_console.tag_bind("hyperlink", "<Button-1>", self.open_url)
@@ -215,6 +225,11 @@ class ResultsFrame(tk.Frame):
             # Store metadata for editing
             self.controller.current_metadata = result.get("metadata", {})
             
+            # Mostrar semáforo ML si está disponible
+            ml_data = result.get("ml_risk_analysis")
+            if ml_data:
+                self._mostrar_semaforo_ml(ml_data)
+            
             # Display formatted JSON
             self.format_json_colored(result)
             self.append_log("\n")
@@ -225,6 +240,33 @@ class ResultsFrame(tk.Frame):
             self.append_log(f"Critical Error during analysis: {e}\n", "error")
             import traceback
             traceback.print_exc()
+
+    def _mostrar_semaforo_ml(self, ml_data: dict):
+        """Muestra un banner visual con el resultado del análisis ML."""
+        nivel = ml_data.get("nivel_riesgo", "?")
+        color = ml_data.get("color", "Verde")
+        score = ml_data.get("score", 0)
+        prediccion = ml_data.get("prediccion", 0)
+
+        # Mapeo de color a tag y a icono
+        mapa_tags = {
+            "Rojo": ("risk_red", "⚠"),
+            "Amarillo": ("risk_yellow", "⚡"),
+            "Verde": ("risk_green", "✓"),
+        }
+        color_tag, icono = mapa_tags.get(color, ("risk_green", "?"))
+
+        # Banner principal
+        self.append_log(f"  {icono} SEMÁFORO ML: Riesgo {nivel}  (score: {score})  ", color_tag)
+        self.append_log("\n\n")
+
+        # Detalle de features
+        features = ml_data.get("features_extraidas", {})
+        if features:
+            self.append_log("  Features extraídas:\n", "risk_detail")
+            for nombre, valor in features.items():
+                self.append_log(f"    • {nombre}: {valor:.4f}\n", "risk_detail")
+            self.append_log("\n")
 
     def save_report(self):
         # Placeholder: In a real app, this would save the JSON content to a file
