@@ -14,7 +14,6 @@ from typing import Any, Dict, List
 
 import numpy as np
 
-# Reutilizamos el mapa extensión→MIME de utils
 try:
     from utils.mime_tools import EXTENSIONES_MIME
 except ImportError:
@@ -38,8 +37,6 @@ _CREADORES_SOSPECHOSOS: List[str] = [
     "hydra",
 ]
 
-
-# --- Utilidades internas ---
 
 def _contar_campos(diccionario: Any, profundidad_max: int = 5) -> int:
     """Cuenta recursivamente todas las claves de un dict anidado."""
@@ -70,8 +67,6 @@ def _obtener_valores_string(diccionario: Any, profundidad_max: int = 5) -> List[
 def _calcular_entropia_shannon(texto: str) -> float:
     """
     Calcula la entropía de Shannon (en bits) de una cadena.
-    Texto normal suele dar ~3.5-4.0; Base64/cifrado sube a ~4.5-6.0.
-    Un valor alto en campos de metadatos sugiere payloads ocultos.
     """
     if not texto:
         return 0.0
