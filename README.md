@@ -60,7 +60,7 @@ Sigue las instrucciones en pantalla para seleccionar la operación deseada e int
 
 ### Ejecución con Interfaz Gráfica (GUI)
 
-Para lanzar la versión con interfaz gráfica, utiliza la bandera `-g` o `--gui`:
+Para lanzar la versión con interfaz gráfica, utiliza el flag `-g` o `--gui`:
 
 ```bash
 python3 analizadorMetadatos.py --gui
